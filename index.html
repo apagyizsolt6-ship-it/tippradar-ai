@@ -3,187 +3,115 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TippRadar AI v0.3</title>
+<title>TippRadar AI v0.3 Lite</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial;background:#07121a;color:white;padding-bottom:85px}
-header{padding:22px;text-align:center;background:#0b1722;position:sticky;top:0;z-index:2}
-h1{margin:0;color:#00ff99;font-size:32px}
-.small{color:#9ca3af;font-size:14px;margin-top:6px}
-.container{padding:16px}
-.search{width:100%;padding:14px;border-radius:14px;border:none;margin-bottom:14px;background:#1e293b;color:white;font-size:16px}
-.filters{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px}
-button{border:none;border-radius:999px;padding:11px 15px;background:#1e293b;color:white;font-weight:bold}
-button.active{background:#00c853}
-.card{background:#142033;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-.league{color:#00ff99;font-size:13px;margin-bottom:8px}
-.match{font-size:22px;font-weight:bold;margin-bottom:14px}
+body{margin:0;font-family:Arial;background:#07121a;color:white;padding-bottom:80px}
+header{text-align:center;padding:22px;background:#0b1722}
+h1{color:#00ff99;margin:0}
+.small{color:#9ca3af}
+.wrap{padding:16px}
+.btns{display:flex;gap:8px;overflow-x:auto;margin-bottom:15px}
+button{border:0;border-radius:20px;padding:12px 16px;background:#1e293b;color:white;font-weight:bold}
+.active{background:#00c853}
+.card{background:#142033;border-radius:18px;padding:16px;margin-bottom:15px}
+.league{color:#00ff99}
+.match{font-size:24px;font-weight:bold;margin:10px 0}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.stat{background:#0b1722;border-radius:12px;padding:10px;text-align:center}
-.label{font-size:12px;color:#9ca3af}
-.value{font-size:24px;color:#00ff99;font-weight:bold;margin-top:4px}
-.tip{margin-top:14px;background:#052e1a;border:1px solid #00c853;padding:12px;border-radius:12px}
-.risk{margin-top:8px;color:#facc15}
-.analysis{margin-top:12px;color:#d1d5db;line-height:1.45;background:#0b1722;padding:12px;border-radius:12px}
-.actions{display:flex;gap:8px;margin-top:12px}
-.actions button{width:50%;border-radius:12px}
-.favorite{background:#334155}
-.saved{background:#facc15;color:#111827}
-.nav{position:fixed;bottom:0;left:0;right:0;background:#0b1722;display:flex;justify-content:space-around;padding:12px 4px;border-top:1px solid #1e293b}
-.nav div{text-align:center;font-size:13px;color:#cbd5e1}
-.nav div.activeNav{color:#00ff99;font-weight:bold}
-.infoBox{background:#142033;border-radius:18px;padding:18px;margin-bottom:14px}
+.box{background:#0b1722;border-radius:12px;padding:10px;text-align:center}
+.box span{color:#9ca3af;font-size:12px}
+.box b{display:block;color:#00ff99;font-size:26px}
+.tip{margin-top:14px;padding:12px;border:1px solid #00c853;border-radius:12px;background:#052e1a}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#0b1722;display:flex;justify-content:space-around;padding:12px;border-top:1px solid #1e293b}
+.nav div{text-align:center}
 </style>
 </head>
 <body>
 
 <header>
 <h1>⚽ TippRadar AI</h1>
-<div class="small">v0.3 – kedvencek, top lista, profil, elemzések</div>
+<div class="small">v0.3 Lite – stabil mobil verzió</div>
 </header>
 
-<div class="container">
-<input class="search" id="search" placeholder="Keresés csapatra..." oninput="render()">
-
-<div class="filters">
-<button class="active" onclick="setFilter('all',this)">Összes</button>
-<button onclick="setFilter('goal',this)">🔥 Gól</button>
-<button onclick="setFilter('btts',this)">🎯 BTTS</button>
-<button onclick="setFilter('corner',this)">🚩 Szöglet</button>
-<button onclick="setFilter('cards',this)">🟨 Lap</button>
-<button onclick="setFilter('offside',this)">🚫 Les</button>
+<div class="wrap">
+<div class="btns">
+<button class="active" onclick="show('all')">Összes</button>
+<button onclick="show('top')">🔥 Top</button>
+<button onclick="show('fav')">⭐ Kedvenc</button>
+<button onclick="show('profile')">👤 Profil</button>
 </div>
 
-<div id="content"></div>
+<div id="app"></div>
 </div>
 
 <div class="nav">
-<div id="navToday" class="activeNav" onclick="setPage('today')">🏠<br>Mai</div>
-<div id="navTop" onclick="setPage('top')">🔥<br>Top</div>
-<div id="navFav" onclick="setPage('favorites')">⭐<br>Kedvenc</div>
-<div id="navProfile" onclick="setPage('profile')">👤<br>Profil</div>
+<div onclick="show('all')">🏠<br>Mai</div>
+<div onclick="show('top')">🔥<br>Top</div>
+<div onclick="show('fav')">⭐<br>Kedvenc</div>
+<div onclick="show('profile')">👤<br>Profil</div>
 </div>
 
 <script>
-let currentFilter="all";
-let currentPage="today";
-let favorites=JSON.parse(localStorage.getItem("favorites") || "[]");
+let fav = JSON.parse(localStorage.getItem("fav") || "[]");
 
-const matches=[
-{league:"Spanyolország",home:"Barcelona",away:"Valencia",goal:89,btts:82,corner:77,cards:61,offside:55,tip:"Over 2.5",risk:"Közepes"},
-{league:"Anglia",home:"Liverpool",away:"Arsenal",goal:84,btts:86,corner:81,cards:74,offside:62,tip:"BTTS",risk:"Közepes"},
-{league:"Olaszország",home:"Roma",away:"Lazio",goal:66,btts:70,corner:73,cards:91,offside:58,tip:"Lap Over",risk:"Alacsony"},
-{league:"Németország",home:"Dortmund",away:"Leipzig",goal:88,btts:84,corner:79,cards:68,offside:64,tip:"Over 2.5",risk:"Közepes"},
-{league:"Franciaország",home:"PSG",away:"Lyon",goal:81,btts:76,corner:85,cards:59,offside:72,tip:"Szöglet Over",risk:"Közepes"},
-{league:"Magyarország",home:"FTC",away:"Paks",goal:78,btts:74,corner:69,cards:82,offside:51,tip:"Lap Over",risk:"Magas"},
-{league:"Hollandia",home:"Ajax",away:"Feyenoord",goal:86,btts:88,corner:83,cards:76,offside:67,tip:"BTTS + Over",risk:"Közepes"},
-{league:"Portugália",home:"Benfica",away:"Porto",goal:72,btts:75,corner:80,cards:89,offside:60,tip:"Lap Over",risk:"Közepes"}
+const games = [
+ ["Olaszország","Roma","Lazio",66,70,73,91,58,"Lap Over"],
+ ["Spanyolország","Barcelona","Valencia",89,82,77,61,55,"Over 2.5"],
+ ["Anglia","Liverpool","Arsenal",84,86,81,74,62,"BTTS"],
+ ["Németország","Dortmund","Leipzig",88,84,79,68,64,"Over 2.5"],
+ ["Franciaország","PSG","Lyon",81,76,85,59,72,"Szöglet Over"],
+ ["Magyarország","FTC","Paks",78,74,69,82,51,"Lap Over"]
 ];
 
-function idOf(m){return m.home+"-"+m.away}
-function bestScore(m){return Math.max(m.goal,m.btts,m.corner,m.cards,m.offside)}
+function best(g){return Math.max(g[3],g[4],g[5],g[6],g[7]);}
+function id(g){return g[1]+"-"+g[2];}
 
-function analysisText(m){
-let best=bestScore(m);
-return `Az AI-index alapján a ${m.home} – ${m.away} mérkőzés legerősebb adatjele: ${m.tip}. A legjobb pontszám ${best}/100. Ez statisztikai jelzés, nem biztos tipp. A kockázati szint: ${m.risk}.`;
+function toggle(x){
+ if(fav.includes(x)){fav=fav.filter(a=>a!==x)}else{fav.push(x)}
+ localStorage.setItem("fav",JSON.stringify(fav));
+ show("all");
 }
 
-function filterMatch(m){
-if(currentFilter==="goal") return m.goal>=80;
-if(currentFilter==="btts") return m.btts>=80;
-if(currentFilter==="corner") return m.corner>=80;
-if(currentFilter==="cards") return m.cards>=80;
-if(currentFilter==="offside") return m.offside>=70;
-return true;
+function card(g){
+ let x=id(g);
+ let saved=fav.includes(x);
+ return `
+ <div class="card">
+ <div class="league">${g[0]}</div>
+ <div class="match">${g[1]} – ${g[2]}</div>
+ <div class="grid">
+ <div class="box"><span>Goal</span><b>${g[3]}</b></div>
+ <div class="box"><span>BTTS</span><b>${g[4]}</b></div>
+ <div class="box"><span>Corner</span><b>${g[5]}</b></div>
+ <div class="box"><span>Cards</span><b>${g[6]}</b></div>
+ <div class="box"><span>Offside</span><b>${g[7]}</b></div>
+ <div class="box"><span>Best</span><b>${best(g)}</b></div>
+ </div>
+ <div class="tip">
+ Ajánlott piac: <b>${g[8]}</b><br>
+ AI elemzés: ${best(g)}/100 adatjel. Ez nem biztos tipp, csak statisztikai jelzés.
+ </div>
+ <br>
+ <button onclick="toggle('${x}')">${saved ? "⭐ Mentve" : "☆ Kedvenchez adás"}</button>
+ </div>`;
 }
 
-function setFilter(f,btn){
-currentFilter=f;
-document.querySelectorAll(".filters button").forEach(b=>b.classList.remove("active"));
-btn.classList.add("active");
-render();
+function show(mode){
+ document.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
+ let list=[...games];
+
+ if(mode==="top") list=list.filter(g=>best(g)>=85);
+ if(mode==="fav") list=list.filter(g=>fav.includes(id(g)));
+ if(mode==="profile"){
+   document.getElementById("app").innerHTML=
+   "<div class='card'><h2>👤 Profil</h2><p>Projekt: TippRadar AI</p><p>Verzió: v0.3 Lite</p><p>Kedvencek száma: "+fav.length+"</p><p>Ez még mintaadatokkal működő prototípus.</p></div>";
+   return;
+ }
+
+ list.sort((a,b)=>best(b)-best(a));
+ document.getElementById("app").innerHTML=list.map(card).join("") || "<div class='card'>Nincs találat.</div>";
 }
 
-function setPage(p){
-currentPage=p;
-document.querySelectorAll(".nav div").forEach(n=>n.classList.remove("activeNav"));
-document.getElementById("navToday").classList.toggle("activeNav",p==="today");
-document.getElementById("navTop").classList.toggle("activeNav",p==="top");
-document.getElementById("navFav").classList.toggle("activeNav",p==="favorites");
-document.getElementById("navProfile").classList.toggle("activeNav",p==="profile");
-render();
-}
-
-function toggleFavorite(matchId){
-if(favorites.includes(matchId)){
-favorites=favorites.filter(x=>x!==matchId);
-}else{
-favorites.push(matchId);
-}
-localStorage.setItem("favorites",JSON.stringify(favorites));
-render();
-}
-
-function matchCard(m){
-let mid=idOf(m);
-let isFav=favorites.includes(mid);
-return `
-<div class="card">
-<div class="league">${m.league}</div>
-<div class="match">${m.home} – ${m.away}</div>
-<div class="grid">
-<div class="stat"><div class="label">Goal</div><div class="value">${m.goal}</div></div>
-<div class="stat"><div class="label">BTTS</div><div class="value">${m.btts}</div></div>
-<div class="stat"><div class="label">Corner</div><div class="value">${m.corner}</div></div>
-<div class="stat"><div class="label">Cards</div><div class="value">${m.cards}</div></div>
-<div class="stat"><div class="label">Offside</div><div class="value">${m.offside}</div></div>
-<div class="stat"><div class="label">Best</div><div class="value">${bestScore(m)}</div></div>
-</div>
-<div class="tip">Ajánlott piac: <b>${m.tip}</b><div class="risk">Kockázat: ${m.risk}</div></div>
-<div class="analysis">${analysisText(m)}</div>
-<div class="actions">
-<button onclick="alert('${analysisText(m)}')">Elemzés</button>
-<button class="${isFav?'saved':'favorite'}" onclick="toggleFavorite('${mid}')">${isFav?'⭐ Mentve':'☆ Kedvenc'}</button>
-</div>
-</div>`;
-}
-
-function renderProfile(){
-document.getElementById("content").innerHTML=`
-<div class="infoBox">
-<h2>👤 Profil</h2>
-<p><b>Felhasználó:</b> Apágyi Zsolt</p>
-<p><b>Projekt:</b> TippRadar AI</p>
-<p><b>Verzió:</b> v0.3</p>
-<p><b>Kedvenc meccsek száma:</b> ${favorites.length}</p>
-<p style="color:#facc15">Figyelem: ez még prototípus mintaadatokkal. A valódi napi meccsadatokat a következő verzióban kötjük be.</p>
-</div>`;
-}
-
-function render(){
-if(currentPage==="profile"){renderProfile();return;}
-
-const q=document.getElementById("search").value.toLowerCase();
-let list=[...matches];
-
-if(currentPage==="top"){
-list=list.filter(m=>bestScore(m)>=85).sort((a,b)=>bestScore(b)-bestScore(a));
-}
-if(currentPage==="favorites"){
-list=list.filter(m=>favorites.includes(idOf(m)));
-}
-
-let html="";
-list
-.filter(m=>filterMatch(m))
-.filter(m=>(m.home+" "+m.away+" "+m.league).toLowerCase().includes(q))
-.sort((a,b)=>bestScore(b)-bestScore(a))
-.forEach(m=>html+=matchCard(m));
-
-document.getElementById("content").innerHTML=html || "<div class='infoBox'>Nincs találat.</div>";
-}
-
-render();
+show("all");
 </script>
 
 </body>
